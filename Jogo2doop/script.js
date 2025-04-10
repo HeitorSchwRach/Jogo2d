@@ -6,27 +6,15 @@ let teclaEsquerdaPressionada = false;
 let teclaDireitaPressionada = false;
 
 document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
-        personagem.saltar();
-    }
-    if (e.code === 'KeyA') {
-        teclaEsquerdaPressionada = true;
-    }
-    if (e.code === 'KeyD') {
-        teclaDireitaPressionada = true;
-    }
-    if (e.code === 'KeyR' && Jogo.gameOver) {
-        window.location.reload();
-    }
+    if (e.code === 'Space') personagem.saltar();
+    if (e.code === 'KeyA') teclaEsquerdaPressionada = true;
+    if (e.code === 'KeyD') teclaDireitaPressionada = true;
+    if (e.code === 'KeyR' && Jogo.gameOver) window.location.reload();
 });
 
 document.addEventListener('keyup', (e) => {
-    if (e.code === 'KeyA') {
-        teclaEsquerdaPressionada = false;
-    }
-    if (e.code === 'KeyD') {
-        teclaDireitaPressionada = false;
-    }
+    if (e.code === 'KeyA') teclaEsquerdaPressionada = false;
+    if (e.code === 'KeyD') teclaDireitaPressionada = false;
 });
 
 class Entidade {
@@ -101,25 +89,21 @@ class Personagem extends Entidade {
 }
 
 class Obstaculo extends Entidade {
-    #velocidade_x;
-    constructor(x, y, largura, altura) {
+    constructor(x, y, largura, altura, velocidade) {
         super(x, y, largura, altura, 'green');
-        this.#velocidade_x = 3;
+        this.velocidade_x = velocidade;
         this.imagem = new Image();
         this.imagem.src = './obs.png';
         this.marcadoParaRemover = false;
+        this.contabilizado = false;
     }
     atualizar() {
         if (!Jogo.gameOver) {
-            this.x -= this.#velocidade_x;
-            if (this.x + this.largura < 0) {
-                this.marcadoParaRemover = true;
-                pontos++;
-            }
+            this.x -= this.velocidade_x;
         }
     }
     pararObstaculo() {
-        this.#velocidade_x = 0;
+        this.velocidade_x = 0;
     }
     desenhar() {
         ctx.drawImage(this.imagem, this.x, this.y, this.largura, this.altura);
@@ -133,9 +117,9 @@ class Jogo {
     constructor() {
         this.personagem = new Personagem(100, canvas.height - 50, 50, 50, 'blue');
         this.obstaculos = [
-            new Obstaculo(canvas.width + 100, canvas.height - 100, 50, 100),
-            new Obstaculo(canvas.width + 400, canvas.height - 120, 50, 120),
-            new Obstaculo(canvas.width + 700, canvas.height - 90, 50, 90)
+            new Obstaculo(canvas.width + 100, canvas.height - 100, 50, 100, 3),
+            new Obstaculo(canvas.width + 400, canvas.height - 120, 50, 120, 3),
+            new Obstaculo(canvas.width + 700, canvas.height - 90, 50, 90, 3)
         ];
         this.loop = this.loop.bind(this);
         this.contadorFrames = 0;
@@ -151,18 +135,29 @@ class Jogo {
             obstaculo.desenhar();
             obstaculo.atualizar();
             this.personagem.verificarColisao(obstaculo);
+
+            if (!obstaculo.contabilizado && obstaculo.x + obstaculo.largura < this.personagem.x) {
+                pontos++;
+                obstaculo.contabilizado = true;
+            }
         });
 
-        this.obstaculos = this.obstaculos.filter(obstaculo => !obstaculo.marcadoParaRemover);
+        const primeiroObstaculo = this.obstaculos[0];
+        if (primeiroObstaculo && primeiroObstaculo.x + primeiroObstaculo.largura < 0) {
+            this.obstaculos = this.obstaculos.slice(1);
+        }
 
         this.contadorFrames++;
-        if (this.contadorFrames % 100 === 0) {
+        if (this.contadorFrames % 100 === 0 && this.obstaculos.length < 3) {
+            const ultimoVelocidade = this.obstaculos.length > 0 ? this.obstaculos[this.obstaculos.length - 1].velocidade_x : 3;
+            const novaVelocidade = ultimoVelocidade + 0.2;
             const altura = 90 + Math.random() * 30;
             const novoObstaculo = new Obstaculo(
                 canvas.width + Math.random() * 200,
                 canvas.height - altura,
                 50,
-                altura
+                altura,
+                novaVelocidade
             );
             this.obstaculos.push(novoObstaculo);
         }
