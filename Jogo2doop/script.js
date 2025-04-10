@@ -1,19 +1,33 @@
-//adicionar pontuação
-//arrumar o problema de double jump
-//privar a propriedade y do personagem
-//Utilizar polimorisfomo e modificar a função e desenhar obstaculo e personagem com imagens personalizadas
-//criar multiplos obstaculos
-//fazer a tecla R reiniciar o jogo
-//Arrumar a função atualizarColisão e pararObjeto
+const canvas = document.getElementById('jogoCanvas');
+const ctx = canvas.getContext('2d');
 
-const canvas = document.getElementById('jogoCanvas')
-const ctx = canvas.getContext('2d')
+let pontos = 0;
+let teclaEsquerdaPressionada = false;
+let teclaDireitaPressionada = false;
 
-document.addEventListener('keypress', (e) => {
-    if (e.code == 'Space') {
-        personagem.saltar()
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        personagem.saltar();
     }
-})
+    if (e.code === 'KeyA') {
+        teclaEsquerdaPressionada = true;
+    }
+    if (e.code === 'KeyD') {
+        teclaDireitaPressionada = true;
+    }
+    if (e.code === 'KeyR' && Jogo.gameOver) {
+        window.location.reload();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyA') {
+        teclaEsquerdaPressionada = false;
+    }
+    if (e.code === 'KeyD') {
+        teclaDireitaPressionada = false;
+    }
+});
 
 class Entidade {
     constructor(x, y, largura, altura, cor) {
@@ -21,27 +35,43 @@ class Entidade {
         this.y = y;
         this.largura = largura;
         this.altura = altura;
-        this.cor = cor
+        this.cor = cor;
     }
     desenhar() {
-        ctx.fillStyle = this.cor
-        ctx.fillRect(this.x, this.y, this.largura, this.altura)
+        ctx.fillStyle = this.cor;
+        ctx.fillRect(this.x, this.y, this.largura, this.altura);
     }
 }
 
 class Personagem extends Entidade {
-    #velocidade_y
+    #velocidade_y;
     constructor(x, y, largura, altura, cor) {
-        super(x, y, largura, altura, cor)
-        this.#velocidade_y = 0
-        this.pulando = false
-        
+        super(x, y, largura, altura, cor);
+        this.#velocidade_y = 0;
+        this.pulando = false;
+        this.imagem = new Image();
+        this.imagem.src = './bon.png';
+        this.velocidadeX = 5;
     }
     saltar() {
-        this.#velocidade_y = 15;
-        this.pulando = true;
+        if (!this.pulando) {
+            this.#velocidade_y = 15;
+            this.pulando = true;
+        }
+    }
+    moverEsquerda() {
+        this.x -= this.velocidadeX;
+        if (this.x < 0) this.x = 0;
+    }
+    moverDireita() {
+        this.x += this.velocidadeX;
+        if (this.x + this.largura > canvas.width) this.x = canvas.width - this.largura;
     }
     atualizar() {
+        if (!Jogo.gameOver) {
+            if (teclaEsquerdaPressionada) this.moverEsquerda();
+            if (teclaDireitaPressionada) this.moverDireita();
+        }
         if (this.pulando) {
             this.y -= this.#velocidade_y;
             this.#velocidade_y -= Jogo.gravidade;
@@ -52,193 +82,101 @@ class Personagem extends Entidade {
             }
         }
     }
-    verificarColisao() {
-        if (jogo.obstaculo.x < this.x + this.largura &&
-            jogo.obstaculo.largura + jogo.obstaculo.x > this.x &&
-            this.y < jogo.obstaculo.y + jogo.obstaculo.altura &&
-            this.y + this.altura > jogo.obstaculo.y) {
-                pararObstaculo()
-                this.#velocidade_y = 0
-                ctx.fillStyle = 'Black'
-                ctx.font = '50px Arial'
-                ctx.fillText('GAME OVER', 300, 100)
-               Jogo.gameOver = true
-            
-            }
-    }
-}
-
-
-class Obstaculo extends Entidade {
-    #velocidade_x
-    constructor(x, y, largura, altura, cor) {
-        super(x, y, largura, altura, cor)
-        this.#velocidade_x = 3
-    }
-    atualizar() {
-        this.x -= this.#velocidade_x;
-        if (this.x <= 0 - this.largura) {
-            this.x = canvas.width;
-            this.#velocidade_x += 1;
-            let novaAltura = Math.random() * (150 - 90) + 90;
-            this.altura = novaAltura
-            this.y = canvas.height - novaAltura
+    verificarColisao(obstaculo) {
+        if (obstaculo.x < this.x + this.largura &&
+            obstaculo.x + obstaculo.largura > this.x &&
+            this.y < obstaculo.y + obstaculo.altura &&
+            this.y + this.altura > obstaculo.y) {
+            obstaculo.pararObstaculo();
+            this.#velocidade_y = 0;
+            ctx.fillStyle = 'black';
+            ctx.font = '50px Arial';
+            ctx.fillText('GAME OVER', 300, 100);
+            Jogo.gameOver = true;
         }
     }
-    pararObstaculo(){
-        this.#velocidade_x = 0
-    }
-};
-class Jogo {
-    static gravidade = 0.5
-    static gameOver = false
-    constructor() {
-        this.personagem = new Personagem(100, canvas.height - 50, 50, 50, 'blue')
-        this.obstaculo = new Obstaculo(canvas.width - 50, canvas.height - 100, 50, 100, 'red')
-        this.loop = this.loop.bind(this)
-    }
-    loop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        this.obstaculo.desenhar()
-        this.personagem.desenhar()
-        this.personagem.atualizar()
-        this.obstaculo.atualizar()
-        requestAnimationFrame(this.loop)
-        this.personagem.verificarColisao()
-        
+    desenhar() {
+        ctx.drawImage(this.imagem, this.x, this.y, this.largura, this.altura);
     }
 }
 
+class Obstaculo extends Entidade {
+    #velocidade_x;
+    constructor(x, y, largura, altura) {
+        super(x, y, largura, altura, 'green');
+        this.#velocidade_x = 3;
+        this.imagem = new Image();
+        this.imagem.src = './obs.png';
+        this.marcadoParaRemover = false;
+    }
+    atualizar() {
+        if (!Jogo.gameOver) {
+            this.x -= this.#velocidade_x;
+            if (this.x + this.largura < 0) {
+                this.marcadoParaRemover = true;
+                pontos++;
+            }
+        }
+    }
+    pararObstaculo() {
+        this.#velocidade_x = 0;
+    }
+    desenhar() {
+        ctx.drawImage(this.imagem, this.x, this.y, this.largura, this.altura);
+    }
+}
 
-const jogo = new Jogo()
-jogo.loop()
+class Jogo {
+    static gravidade = 0.5;
+    static gameOver = false;
 
-// const canvas = document.getElementById('jogoCanvas');
-// const ctx = canvas.getContext('2d');
+    constructor() {
+        this.personagem = new Personagem(100, canvas.height - 50, 50, 50, 'blue');
+        this.obstaculos = [
+            new Obstaculo(canvas.width + 100, canvas.height - 100, 50, 100),
+            new Obstaculo(canvas.width + 400, canvas.height - 120, 50, 120),
+            new Obstaculo(canvas.width + '70'0, canvas.height - 90, 50, 90)
+        ];
+        this.loop = this.loop.bind(this);
+        this.contadorFrames = 0;
+    }
 
-// document.addEventListener('keypress', (e) => {
-//     if (e.code == 'Space') {
-//         personagem.saltar();
-//     }
-//     if (e.code == 'KeyR') {
-//         jogo.reiniciar();
-//     }
-// });
+    loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// class Entidade {
-//     constructor(x, y, largura, altura, cor) {
-//         this.x = x;
-//         this.y = y;
-//         this.largura = largura;
-//         this.altura = altura;
-//         this.cor = cor;
-//     }
-//     desenhar() {
-//         ctx.fillStyle = this.cor;
-//         ctx.fillRect(this.x, this.y, this.largura, this.altura);
-//     }
-// }
+        this.personagem.desenhar();
+        this.personagem.atualizar();
 
-// class Personagem extends Entidade {
-//     #y;
-//     #velocidade_y;
-//     constructor(x, y, largura, altura, cor) {
-//         super(x, y, largura, altura, cor);
-//         this.#y = y;
-//         this.#velocidade_y = 0;
-//         this.pulando = false;
-//     }
-//     saltar() {
-//         this.#velocidade_y = 15;
-//         this.pulando = true;
-//     }
-//     atualizar() {
-//         if (this.pulando) {
-//             this.#y -= this.#velocidade_y;
-//             this.#velocidade_y -= Jogo.gravidade;
-//             if (this.#y >= canvas.height - 50) {
-//                 this.#velocidade_y = 0;
-//                 this.#y = canvas.height - 50;
-//                 this.pulando = false;
-//             }
-//         }
-//     }
-//     desenhar() {
-//         ctx.fillStyle = this.cor;
-//         ctx.fillRect(this.x, this.#y, this.largura, this.altura);
-//     }
-//     verificarColisao(obstaculos) {
-//         for (let obstaculo of obstaculos) {
-//             if (
-//                 obstaculo.x < this.x + this.largura &&
-//                 obstaculo.x + obstaculo.largura > this.x &&
-//                 this.#y < obstaculo.y + obstaculo.altura &&
-//                 this.#y + this.altura > obstaculo.y
-//             ) {
-//                 Jogo.gameOver = true;
-//                 ctx.fillStyle = 'black';
-//                 ctx.font = '50px Arial';
-//                 ctx.fillText('GAME OVER', 300, 100);
-//             }
-//         }
-//     }
-// }
+        this.obstaculos.forEach(obstaculo => {
+            obstaculo.desenhar();
+            obstaculo.atualizar();
+            this.personagem.verificarColisao(obstaculo);
+        });
 
-// class Obstaculo extends Entidade {
-//     #velocidade_x;
-//     constructor(x, y, largura, altura, cor) {
-//         super(x, y, largura, altura, cor);
-//         this.#velocidade_x = 3;
-//     }
-//     atualizar() {
-//         if (!Jogo.gameOver) {
-//             this.x -= this.#velocidade_x;
-//             if (this.x <= 0 - this.largura) {
-//                 this.x = canvas.width;
-//                 Jogo.pontuacao++;
-//                 this.#velocidade_x += 0.5;
-//             }
-//         }
-//     }
-// }
+        this.obstaculos = this.obstaculos.filter(obstaculo => !obstaculo.marcadoParaRemover);
 
-// class Jogo {
-//     static gravidade = 0.5;
-//     static gameOver = false;
-//     static pontuacao = 0;
-//     constructor() {
-//         this.obstaculos = [
-//             new Obstaculo(canvas.width - 50, canvas.height - 100, 50, 100, 'red'),
-//             new Obstaculo(canvas.width + 200, canvas.height - 120, 50, 120, 'red')
-//         ];
-//         this.loop = this.loop.bind(this);
-//         this.loop();
-//     }
-//     reiniciar() {
-//         Jogo.gameOver = false;
-//         Jogo.pontuacao = 0;
-//         this.obstaculos.forEach(obstaculo => {
-//             obstaculo.x = canvas.width + Math.random() * 300;
-//         });
-//         this.loop();
-//     }
-//     loop() {
-//         ctx.clearRect(0, 0, canvas.width, canvas.height);
-//         personagem.desenhar();
-//         personagem.atualizar();
-//         this.obstaculos.forEach(obstaculo => {
-//             obstaculo.desenhar();
-//             obstaculo.atualizar();
-//         });
-//         personagem.verificarColisao(this.obstaculos);
-//         ctx.fillStyle = 'black';
-//         ctx.font = '20px Arial';
-//         ctx.fillText(`Pontuação: ${Jogo.pontuacao}`, 10, 20);
-//         if (!Jogo.gameOver) {
-//             requestAnimationFrame(this.loop);
-//         }
-//     }
-// }
+        this.contadorFrames++;
+        if (this.contadorFrames % 100 === 0) {
+            const altura = 90 + Math.random() * 30;
+            const novoObstaculo = new Obstaculo(
+                canvas.width + Math.random() * 200,
+                canvas.height - altura,
+                50,
+                altura
+            );
+            this.obstaculos.push(novoObstaculo);
+        }
 
-// const personagem = new Personagem(100, canvas.height - 50, 50, 50, 'blue');
-// const jogo = new Jogo();
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Pontos: ${pontos}`, 10, 30);
+
+        if (!Jogo.gameOver) {
+            requestAnimationFrame(this.loop);
+        }
+    }
+}
+
+const jogo = new Jogo();
+const personagem = jogo.personagem;
+jogo.loop();
