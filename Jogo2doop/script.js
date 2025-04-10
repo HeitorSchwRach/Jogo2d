@@ -135,7 +135,7 @@ class Jogo {
         this.obstaculos = [
             new Obstaculo(canvas.width + 100, canvas.height - 100, 50, 100),
             new Obstaculo(canvas.width + 400, canvas.height - 120, 50, 120),
-            new Obstaculo(canvas.width + '70'0, canvas.height - 90, 50, 90)
+            new Obstaculo(canvas.width + 700, canvas.height - 90, 50, 90)
         ];
         this.loop = this.loop.bind(this);
         this.contadorFrames = 0;
